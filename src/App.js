@@ -30,6 +30,41 @@ background-color: hsla(115, 40%, 50%, 1);
 color: white;
 `;
 
+const MainPanel = styled.div`
+display: flex;
+flex: 7;
+flex-direction: column;
+height: auto;
+width: auto;
+`;
+
+const SidePanel = styled.div`
+display: flex;
+flex-flow: column;
+justify-content: flex-start;
+align-items: center;
+flex: 1;
+padding: 20px;
+background-color: hsla(80, 10%, 40%, 1);
+`;
+
+const Button = styled.div`
+font-size: 18px;
+width: 60%;
+padding: 1rem;
+border-radius: 9px;
+// background-color: red;
+background-image: linear-gradient( 135deg, #E8D07A 0%, #5312D6 100%);
+`;
+
+const WidgetContainer = styled.div`
+display: flex;
+flex-flow: column;
+align-items: center;
+padding-top: 50px;
+// width: auto;
+`;
+
 const currency = ["usd", "eur", "gbp", "jpy"];
 
 // const url = 'http://api.fixer.io/latest?base=USD';
@@ -39,43 +74,57 @@ class App extends React.Component {
   constructor() {
     super();
     this.handler = this.handler.bind(this);
+    this.sliderHandler = this.sliderHandler.bind(this);
+    this.load_data = this.load_data.bind(this);
   }
-  state = { data: {}, fullData: {} };
+  state = { data: {}, fullData: {}, timeInterval: 10000 };
 
-  async load_data(path) {
+  async load_data() {
     try {
-    //   const req = await fetch(path);
-    //   const results = await req.json();
+      let fullData = {};
 
-      // offline data
-      // const results = data;
-      // console.log(results.rates);
+      //   // offline data
+      //   fullData[currency[0]] = data;
 
-      // error /forEach/ or /map/ functions are synchoronous that means we can't use /async fetch/ inside it
-      let fullData = currency.forEach((base)=> {
-          let req = await fetch(path + base);
-          let results = await req.json();
-          
-          return(results)
+      for (var i = 0; i < currency.length; i++) {
+        let currString = currency[i];
+        let req = await fetch(url + currString);
+        let results = await req.json();
+
+        fullData[currString] = results;
+      }
+
+      this.setState({
+        data: fullData[currency[0]],
+        fullData: fullData,
+        lastUpdated: new Date(Date.now()).toLocaleString()
       });
-
-
-//-------------------------------
-    //   this.setState({ data: results });
-    //   this.setState({ data: fullData });
     } catch (error) {
       alert(error.message);
     }
   }
 
   componentDidMount() {
-    this.load_data(url + currency[0]);
+    this.load_data();
   }
 
   handler(e) {
-    const arg = e.target.textContent;
-    this.load_data(url + arg);
+    const arg = e.target.textContent.toLowerCase();
+    this.setState({ data: this.state.fullData[arg] });
   }
+
+  sliderHandler = e => {
+    const t = e.target.value;
+
+    setInterval(() => {
+      // TODO logs all the previous selections too!!! fix?
+      // TODO when trying to set arbitrary interval things breake
+      console.log({ ku: t });
+      this.load_data();
+    }, t);
+    this.setState({ timeInterval: t });
+    e.preventDefault();
+  };
 
   render() {
     let headers = currency.map(elem => {
@@ -92,21 +141,48 @@ class App extends React.Component {
     });
     let routes = currency.map(elem => {
       return (
-        <Route key={elem} exact path={`/${elem}`} render={() =>         <CartItems base={elem} data={this.state.data} />} />
+        <Route
+          key={elem}
+          exact
+          path={`/${elem}`}
+          render={() => <CartItems base={elem} data={this.state.fullData} />}
+        />
       );
     });
     // console.log(this.state.data);
     return (
       <Router>
-        <div>
-          <Header>
-            {headers}
-          </Header>
-          <Cart>
-            <Route exact path={"/"} render={() => 
-                <CartItems data={this.state.data} />} />
-            {routes}
-          </Cart>
+        <div style={{ display: "flex" }}>
+          <SidePanel>
+            <Button onClick={this.load_data}>Update Data</Button>
+            <WidgetContainer>
+              <input
+                id="defaultSlider"
+                type="range"
+                min="10000"
+                max="600000"
+                value={this.state.timeInterval}
+                onChange={this.sliderHandler}
+              />
+              <label>{Math.round(this.state.timeInterval / 1000)}</label>
+            </WidgetContainer>
+            <WidgetContainer>
+              <label>{this.state.lastUpdated}</label>
+            </WidgetContainer>
+          </SidePanel>
+          <MainPanel>
+            <Header>
+              {headers}
+            </Header>
+            <Cart>
+              <Route
+                exact
+                path={"/"}
+                render={() => <CartItems data={this.state.fullData} />}
+              />
+              {routes}
+            </Cart>
+          </MainPanel>
         </div>
       </Router>
     );
@@ -114,21 +190,31 @@ class App extends React.Component {
 }
 
 const CartItems = props => {
+  console.log("props");
+  console.log(props.base);
+
   var rates = [];
-  for (var key in props.data.rates) {
-    let wholeArr = [key, props.data.rates[key]];
-    rates.push(wholeArr);
+  let showItems = null;
+  const data = props.base === undefined
+    ? props.data[currency[0]]
+    : props.data[props.base];
+
+  if (data !== undefined) {
+    for (var key in data.rates) {
+      let wholeArr = [key, data.rates[key]];
+      rates.push(wholeArr);
+    }
+
+    console.log(rates);
+
+    showItems = rates.map(item => {
+      return (
+        <li style={{ color: "hsla(60, 100%, 50%, 1)" }} key={item[0]}>
+          <h2>{item[0]} : {item[1]}</h2>
+        </li>
+      );
+    });
   }
-
-  console.log(rates);
-
-  const showItems = rates.map(item => {
-    return (
-      <li style={{ color: "hsla(60, 100%, 50%, 1)" }} key={item[0]}>
-        <h2>{item[0]} : {item[1]}</h2>
-      </li>
-    );
-  });
 
   return (
     <div>
