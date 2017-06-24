@@ -118,10 +118,10 @@ class App extends React.Component {
 
     setInterval(() => {
       // TODO logs all the previous selections too!!! fix?
-      // TODO when trying to set arbitrary interval things breake
+      // TODO when trying to set arbitrary interval it loads continiously :(
       console.log({ ku: t });
       this.load_data();
-    }, t);
+    }, {t});
     this.setState({ timeInterval: t });
     e.preventDefault();
   };
