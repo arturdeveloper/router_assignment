@@ -61,7 +61,7 @@ const WidgetContainer = styled.div`
 display: flex;
 flex-flow: column;
 align-items: center;
-padding-top: 50px;
+padding-top: 40px;
 // width: auto;
 `;
 
@@ -69,6 +69,8 @@ const currency = ["usd", "eur", "gbp", "jpy"];
 
 // const url = 'http://api.fixer.io/latest?base=USD';
 const url = "http://api.fixer.io/latest?base=";
+
+let intervalId;
 
 class App extends React.Component {
   constructor() {
@@ -114,16 +116,20 @@ class App extends React.Component {
   }
 
   sliderHandler = e => {
-    const t = e.target.value;
+    const t = Number(e.target.value);
+    this.stopInterval();
 
-    setInterval(() => {
-      // TODO logs all the previous selections too!!! fix?
-      // TODO when trying to set arbitrary interval it loads continiously :(
+    intervalId = setInterval(() => {
       console.log({ ku: t });
       this.load_data();
-    }, {t});
+    }, t);
+
     this.setState({ timeInterval: t });
     e.preventDefault();
+  };
+
+  stopInterval = () => {
+    clearInterval(intervalId);
   };
 
   render() {
@@ -157,16 +163,19 @@ class App extends React.Component {
             <Button onClick={this.load_data}>Update Data</Button>
             <WidgetContainer>
               <input
-                id="defaultSlider"
                 type="range"
                 min="10000"
                 max="600000"
                 value={this.state.timeInterval}
                 onChange={this.sliderHandler}
               />
-              <label>{Math.round(this.state.timeInterval / 1000)}</label>
+              <label style={{ paddingBottom: "1rem" }}>
+                {Math.round(this.state.timeInterval / 1000)}
+              </label>
+              <Button onClick={this.stopInterval}>Stop Update</Button>
             </WidgetContainer>
             <WidgetContainer>
+              <h2>Last Updated</h2>
               <label>{this.state.lastUpdated}</label>
             </WidgetContainer>
           </SidePanel>
