@@ -88,13 +88,15 @@ class App extends React.Component {
       //   // offline data
       //   fullData[currency[0]] = data;
 
-      for (var i = 0; i < currency.length; i++) {
-        let currString = currency[i];
-        let req = await fetch(url + currString);
-        let results = await req.json();
-
-        fullData[currString] = results;
-      }
+      Promise.all(currency.map(curr => fetch(url + curr))).then(val => {
+        Promise.all(val.map(elem => elem.json())).then(val => {
+          console.log(val); // TODO loads data after the Component is rendered. With timer it displays nothing which is bad :(
+          for (var i = 0; i < currency.length; i++) {
+            let currString = currency[i];
+            fullData[currString] = val[i];
+          }
+        });
+      });
 
       this.setState({
         data: fullData[currency[0]],
@@ -119,17 +121,20 @@ class App extends React.Component {
     const t = Number(e.target.value);
     this.stopInterval();
 
-    intervalId = setInterval(() => {
+    let recursiveTimeout = () => {
       console.log({ ku: t });
       this.load_data();
-    }, t);
+      intervalId = setTimeout(recursiveTimeout, t);
+    };
+
+    setTimeout(recursiveTimeout, t);
 
     this.setState({ timeInterval: t });
     e.preventDefault();
   };
 
   stopInterval = () => {
-    clearInterval(intervalId);
+    clearTimeout(intervalId);
   };
 
   render() {
@@ -209,7 +214,7 @@ const CartItems = props => {
     : props.data[props.base];
 
   if (data !== undefined) {
-    for (var key in data.rates) {
+    for (const key of Object.keys(data.rates)) {
       let wholeArr = [key, data.rates[key]];
       rates.push(wholeArr);
     }
